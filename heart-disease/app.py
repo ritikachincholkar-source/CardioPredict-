@@ -6,12 +6,17 @@ import os
 import plotly.graph_objects as go
 from fpdf import FPDF
 
+
+# ---------- Page Configuration ----------
 st.set_page_config(
     page_title="Heart Disease Risk Prediction",
     layout="centered"
 )
 
-st.title("❤️ Heart Disease Risk Prediction")
+
+# ---------- Title ----------
+st.title("Heart Disease Risk Prediction")
+
 st.write(
     "Machine Learning-based risk assessment using clinical data "
     "(UCI Heart Disease Dataset)"
@@ -21,18 +26,28 @@ st.write(
 # ---------- Load Model, Scaler and Columns ----------
 @st.cache_resource
 def load_artifacts():
+
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
     model = joblib.load(
-        os.path.join(base_dir, "heart_disease_model.pkl")
+        os.path.join(
+            base_dir,
+            "heart_disease_model.pkl"
+        )
     )
 
     scaler = joblib.load(
-        os.path.join(base_dir, "heart_disease_scaler.pkl")
+        os.path.join(
+            base_dir,
+            "heart_disease_scaler.pkl"
+        )
     )
 
     columns = joblib.load(
-        os.path.join(base_dir, "heart_disease_columns.pkl")
+        os.path.join(
+            base_dir,
+            "heart_disease_columns.pkl"
+        )
     )
 
     return model, scaler, columns
@@ -46,6 +61,8 @@ st.subheader("Enter Patient Clinical Values")
 
 col1, col2 = st.columns(2)
 
+
+# ---------- Left Column ----------
 with col1:
 
     age = st.number_input(
@@ -57,7 +74,10 @@ with col1:
 
     sex = st.selectbox(
         "Sex",
-        options=[("Male", 1), ("Female", 0)],
+        options=[
+            ("Male", 1),
+            ("Female", 0)
+        ],
         format_func=lambda x: x[0]
     )[1]
 
@@ -106,6 +126,7 @@ with col1:
     )[1]
 
 
+# ---------- Right Column ----------
 with col2:
 
     thalach = st.number_input(
@@ -144,7 +165,12 @@ with col2:
 
     ca = st.selectbox(
         "Major Vessels Blocked (0-3)",
-        options=[0, 1, 2, 3]
+        options=[
+            0,
+            1,
+            2,
+            3
+        ]
     )
 
     has_thal_test = st.checkbox(
@@ -169,14 +195,15 @@ with col2:
         thal = 3
 
         st.caption(
-            "Thalassemia test is specialized and not always available — "
-            "defaulting to 'Normal' if unchecked."
+            "Thalassemia test is specialized and not always available - "
+            "defaulting to Normal if unchecked."
         )
 
 
 # ---------- Prediction ----------
 if st.button("Predict Risk"):
 
+    # ---------- Input Data ----------
     input_data = pd.DataFrame(
         [[
             age,
@@ -196,11 +223,17 @@ if st.button("Predict Risk"):
         columns=columns
     )
 
+
+    # ---------- Scaling ----------
     input_scaled = scaler.transform(input_data)
 
+
+    # ---------- Prediction ----------
     prediction = model.predict(input_scaled)[0]
 
-    probability = model.predict_proba(input_scaled)[0][1]
+    probability = model.predict_proba(
+        input_scaled
+    )[0][1]
 
 
     # ---------- Risk Level ----------
@@ -238,28 +271,36 @@ if st.button("Predict Risk"):
         go.Indicator(
             mode="gauge+number",
             value=probability * 100,
+
             number={
                 "suffix": "%"
             },
+
             title={
                 "text": "Heart Disease Risk"
             },
+
             gauge={
                 "axis": {
                     "range": [0, 100]
                 },
+
                 "bar": {
                     "color": color
                 },
+
                 "steps": [
+
                     {
                         "range": [0, 33],
                         "color": "#d4f4dd"
                     },
+
                     {
                         "range": [33, 66],
                         "color": "#ffe8b3"
                     },
+
                     {
                         "range": [66, 100],
                         "color": "#ffd6d6"
@@ -268,6 +309,7 @@ if st.button("Predict Risk"):
             }
         )
     )
+
 
     fig.update_layout(
         height=300,
@@ -278,6 +320,7 @@ if st.button("Predict Risk"):
             b=20
         )
     )
+
 
     st.plotly_chart(
         fig,
@@ -290,7 +333,10 @@ if st.button("Predict Risk"):
 
     explainer = shap.TreeExplainer(model)
 
-    shap_values = explainer.shap_values(input_scaled)
+    shap_values = explainer.shap_values(
+        input_scaled
+    )
+
 
     if isinstance(shap_values, list):
 
@@ -298,46 +344,70 @@ if st.button("Predict Risk"):
 
     else:
 
-        patient_shap = shap_values[0, :, 1]
+        if len(shap_values.shape) == 3:
+
+            patient_shap = shap_values[0, :, 1]
+
+        else:
+
+            patient_shap = shap_values[0]
 
 
-    explain_df = pd.DataFrame({
-        "Feature": columns,
-        "Contribution": patient_shap
-    }).sort_values(
+    explain_df = pd.DataFrame(
+        {
+            "Feature": columns,
+            "Contribution": patient_shap
+        }
+    )
+
+
+    explain_df = explain_df.sort_values(
         by="Contribution",
         key=abs,
         ascending=False
     ).head(5)
 
 
+    # ---------- SHAP Result ----------
     st.subheader(
         "Why this result? (Top contributing factors)"
     )
 
+
     explanation_lines = []
+
 
     for _, row in explain_df.iterrows():
 
-        direction = (
-            "increases"
-            if row["Contribution"] > 0
-            else "decreases"
-        )
+        if row["Contribution"] > 0:
+
+            direction = "increases"
+
+        else:
+
+            direction = "decreases"
+
 
         line = (
             f"{row['Feature']} {direction} risk"
         )
 
+
         st.write(
             f"- **{row['Feature']}** {direction} risk"
         )
 
-        explanation_lines.append(line)
+
+        explanation_lines.append(
+            line
+        )
 
 
     # ---------- Lifestyle Recommendations ----------
-    st.subheader("Suggested Next Steps")
+    st.subheader(
+        "Suggested Next Steps"
+    )
+
 
     recommendations = []
 
@@ -352,7 +422,7 @@ if st.button("Predict Risk"):
     if chol > 240:
 
         recommendations.append(
-            "Cholesterol is elevated — consider dietary "
+            "Cholesterol is elevated - consider dietary "
             "changes and a lipid profile test."
         )
 
@@ -360,7 +430,7 @@ if st.button("Predict Risk"):
     if trestbps > 140:
 
         recommendations.append(
-            "Blood pressure is high — regular BP monitoring "
+            "Blood pressure is high - regular BP monitoring "
             "is recommended."
         )
 
@@ -368,7 +438,7 @@ if st.button("Predict Risk"):
     if fbs == 1:
 
         recommendations.append(
-            "Fasting blood sugar is elevated — screening "
+            "Fasting blood sugar is elevated - screening "
             "for diabetes is advised."
         )
 
@@ -376,7 +446,7 @@ if st.button("Predict Risk"):
     if exang == 1:
 
         recommendations.append(
-            "Exercise-induced chest pain reported — avoid "
+            "Exercise-induced chest pain reported - avoid "
             "strenuous activity until evaluated."
         )
 
@@ -402,102 +472,252 @@ if st.button("Predict Risk"):
     )
 
 
-    # ---------- Downloadable PDF Report ----------
+    # =====================================================
+    # PDF REPORT
+    # =====================================================
+
     def generate_pdf():
 
-    pdf = FPDF()
-    pdf.add_page()
+        pdf = FPDF()
 
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(
-        0, 10,
-        "Heart Disease Risk Prediction Report",
-        ln=True,
-        align="C"
+        pdf.add_page()
+
+
+        # ---------- PDF Title ----------
+        pdf.set_font(
+            "Arial",
+            "B",
+            16
+        )
+
+        pdf.cell(
+            0,
+            10,
+            "Heart Disease Risk Prediction Report",
+            ln=True,
+            align="C"
+        )
+
+
+        pdf.ln(5)
+
+
+        # ---------- Risk ----------
+        pdf.set_font(
+            "Arial",
+            "",
+            12
+        )
+
+        pdf.cell(
+            0,
+            8,
+            f"Risk Level: {risk}",
+            ln=True
+        )
+
+        pdf.cell(
+            0,
+            8,
+            f"Predicted Probability: {probability:.1%}",
+            ln=True
+        )
+
+
+        pdf.ln(5)
+
+
+        # ---------- Clinical Values ----------
+        pdf.set_font(
+            "Arial",
+            "B",
+            13
+        )
+
+        pdf.cell(
+            0,
+            8,
+            "Entered Clinical Values:",
+            ln=True
+        )
+
+
+        pdf.set_font(
+            "Arial",
+            "",
+            11
+        )
+
+
+        for col, val in zip(
+            columns,
+            input_data.iloc[0]
+        ):
+
+            text = f"{col}: {val}"
+
+            # Remove unsupported Unicode characters
+            text = text.replace(
+                "—",
+                "-"
+            )
+
+            text = text.replace(
+                "–",
+                "-"
+            )
+
+            text = text.replace(
+                "’",
+                "'"
+            )
+
+            text = text.replace(
+                "“",
+                '"'
+            )
+
+            text = text.replace(
+                "”",
+                '"'
+            )
+
+
+            pdf.cell(
+                0,
+                7,
+                text,
+                ln=True
+            )
+
+
+        pdf.ln(5)
+
+
+        # ---------- SHAP Factors ----------
+        pdf.set_font(
+            "Arial",
+            "B",
+            13
+        )
+
+        pdf.cell(
+            0,
+            8,
+            "Top Contributing Factors:",
+            ln=True
+        )
+
+
+        pdf.set_font(
+            "Arial",
+            "",
+            11
+        )
+
+
+        for line in explanation_lines:
+
+            line = line.replace(
+                "—",
+                "-"
+            )
+
+            line = line.replace(
+                "–",
+                "-"
+            )
+
+            line = line.replace(
+                "’",
+                "'"
+            )
+
+
+            pdf.cell(
+                0,
+                7,
+                f"- {line}",
+                ln=True
+            )
+
+
+        pdf.ln(5)
+
+
+        # ---------- Recommendations ----------
+        pdf.set_font(
+            "Arial",
+            "B",
+            13
+        )
+
+        pdf.cell(
+            0,
+            8,
+            "Suggested Next Steps:",
+            ln=True
+        )
+
+
+        pdf.set_font(
+            "Arial",
+            "",
+            11
+        )
+
+
+        for rec in recommendations:
+
+            rec = rec.replace(
+                "—",
+                "-"
+            )
+
+            rec = rec.replace(
+                "–",
+                "-"
+            )
+
+            rec = rec.replace(
+                "’",
+                "'"
+            )
+
+            rec = rec.replace(
+                "“",
+                '"'
+            )
+
+            rec = rec.replace(
+                "”",
+                '"'
+            )
+
+
+            pdf.multi_cell(
+                0,
+                7,
+                f"- {rec}"
+            )
+
+
+        return bytes(
+            pdf.output(dest="S")
+        )
+
+
+    # ---------- Create PDF ----------
+    pdf_bytes = generate_pdf()
+
+
+    # ---------- Download PDF ----------
+    st.download_button(
+        label="Download Report as PDF",
+        data=pdf_bytes,
+        file_name="heart_disease_risk_report.pdf",
+        mime="application/pdf"
     )
-
-    pdf.ln(5)
-
-    pdf.set_font("Arial", "", 12)
-
-    pdf.cell(0, 8, f"Risk Level: {risk}", ln=True)
-    pdf.cell(0, 8, f"Predicted Probability: {probability:.1%}", ln=True)
-
-    pdf.ln(5)
-
-    pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, "Entered Clinical Values:", ln=True)
-
-    pdf.set_font("Arial", "", 11)
-
-    for col, val in zip(columns, input_data.iloc[0]):
-
-        text = f"{col}: {val}"
-
-        text = text.replace("—", "-")
-        text = text.replace("–", "-")
-        text = text.replace("’", "'")
-        text = text.replace("“", '"')
-        text = text.replace("”", '"')
-
-        pdf.cell(0, 7, text, ln=True)
-
-    pdf.ln(5)
-
-    pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, "Top Contributing Factors:", ln=True)
-
-    pdf.set_font("Arial", "", 11)
-
-    for line in explanation_lines:
-
-        line = line.replace("—", "-")
-        line = line.replace("–", "-")
-        line = line.replace("’", "'")
-
-        pdf.cell(0, 7, f"- {line}", ln=True)
-
-    pdf.ln(5)
-
-    pdf.set_font("Arial", "B", 13)
-    pdf.cell(0, 8, "Suggested Next Steps:", ln=True)
-
-    pdf.set_font("Arial", "", 11)
-
-    for rec in recommendations:
-
-        rec = rec.replace("—", "-")
-        rec = rec.replace("–", "-")
-        rec = rec.replace("’", "'")
-        rec = rec.replace("“", '"')
-        rec = rec.replace("”", '"')
-
-        pdf.multi_cell(0, 7, f"- {rec}")
-
-    return bytes(pdf.output(dest="S"))
-
-
-pdf_bytes = generate_pdf()
-
-st.download_button(
-    label="📄 Download Report as PDF",
-    data=pdf_bytes,
-    file_name="heart_disease_risk_report.pdf",
-    mime="application/pdf"
-)
-   
-
-       
-           
-
-       
-           
-
-
-     
-           
-
-  
 
 
 # ---------- Footer ----------
