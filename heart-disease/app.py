@@ -556,7 +556,6 @@ if st.button("Predict Risk"):
 
             text = f"{col}: {val}"
 
-            # Remove unsupported Unicode characters
             text = text.replace(
                 "—",
                 "-"
@@ -694,9 +693,8 @@ if st.button("Predict Risk"):
                 '"'
             )
 
-
             pdf.multi_cell(
-                0,
+                180,
                 7,
                 f"- {rec}"
             )
