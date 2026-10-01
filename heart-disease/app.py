@@ -403,6 +403,88 @@ if st.button("Predict Risk"):
 
 
     # ---------- Downloadable PDF Report ----------
+    def generate_pdf():
+
+    pdf = FPDF()
+    pdf.add_page()
+
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(
+        0, 10,
+        "Heart Disease Risk Prediction Report",
+        ln=True,
+        align="C"
+    )
+
+    pdf.ln(5)
+
+    pdf.set_font("Arial", "", 12)
+
+    pdf.cell(0, 8, f"Risk Level: {risk}", ln=True)
+    pdf.cell(0, 8, f"Predicted Probability: {probability:.1%}", ln=True)
+
+    pdf.ln(5)
+
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Entered Clinical Values:", ln=True)
+
+    pdf.set_font("Arial", "", 11)
+
+    for col, val in zip(columns, input_data.iloc[0]):
+
+        text = f"{col}: {val}"
+
+        text = text.replace("—", "-")
+        text = text.replace("–", "-")
+        text = text.replace("’", "'")
+        text = text.replace("“", '"')
+        text = text.replace("”", '"')
+
+        pdf.cell(0, 7, text, ln=True)
+
+    pdf.ln(5)
+
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Top Contributing Factors:", ln=True)
+
+    pdf.set_font("Arial", "", 11)
+
+    for line in explanation_lines:
+
+        line = line.replace("—", "-")
+        line = line.replace("–", "-")
+        line = line.replace("’", "'")
+
+        pdf.cell(0, 7, f"- {line}", ln=True)
+
+    pdf.ln(5)
+
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Suggested Next Steps:", ln=True)
+
+    pdf.set_font("Arial", "", 11)
+
+    for rec in recommendations:
+
+        rec = rec.replace("—", "-")
+        rec = rec.replace("–", "-")
+        rec = rec.replace("’", "'")
+        rec = rec.replace("“", '"')
+        rec = rec.replace("”", '"')
+
+        pdf.multi_cell(0, 7, f"- {rec}")
+
+    return bytes(pdf.output(dest="S"))
+
+
+pdf_bytes = generate_pdf()
+
+st.download_button(
+    label="📄 Download Report as PDF",
+    data=pdf_bytes,
+    file_name="heart_disease_risk_report.pdf",
+    mime="application/pdf"
+)
    
 
        
@@ -415,15 +497,7 @@ if st.button("Predict Risk"):
      
            
 
-    pdf_bytes = generate_pdf()
-
-
-    st.download_button(
-        label="📄 Download Report as PDF",
-        data=pdf_bytes,
-        file_name="heart_disease_risk_report.pdf",
-        mime="application/pdf"
-    )
+  
 
 
 # ---------- Footer ----------
